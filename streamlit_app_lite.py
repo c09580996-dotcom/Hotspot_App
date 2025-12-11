@@ -326,13 +326,25 @@ def main():
                             fig = plot_hotspot_heatmap(results)
                             st.pyplot(fig)
                             st.markdown("---")
-                            st.subheader("📍 Top Hotspot Cells")
-                            hotspots = results['hotspot_cells'].sort_values('count', ascending=False)
-                            if len(hotspots) > 0:
-                                display_df = hotspots[['lat_center', 'lon_center', 'count']].head(20).copy()
+                        st.subheader("📍 Top Hotspot Cells")
+                        hotspots = results['hotspot_cells']
+
+                        if hotspots is not None and len(hotspots) > 0:
+                            # Make sure expected columns exist
+                            expected_cols = ['lat_center', 'lon_center', 'count']
+                            available = [c for c in expected_cols if c in hotspots.columns]
+
+                            if len(available) == 3:
+                                hotspots = hotspots.sort_values('count', ascending=False)
+                                display_df = hotspots[available].head(20).copy()
                                 display_df.columns = ['Latitude', 'Longitude', 'Incident Count']
                                 st.dataframe(display_df.reset_index(drop=True), use_container_width=True)
-                            st.success(f"✅ Analyzed {results['total_incidents']} incidents in {results['total_cells']} cells, identified {results['hotspot_count']} hotspots")
+                            else:
+                                st.warning(f"Hotspot coordinate columns missing: {set(expected_cols) - set(hotspots.columns)}")
+                        else:
+                            st.info("No hotspot cells found for the current analysis.")
+
+                        st.success(f"✅ Analyzed {results['total_incidents']} incidents in {results['total_cells']} cells, identified {results['hotspot_count']} hotspots")
                     
                     elif method == "Temporal Analysis":
                         result, error = perform_temporal_analysis(st.session_state.df)
@@ -396,6 +408,7 @@ def main():
                 if 'Lat_Public' in df.columns:
                     valid = df[['Lat_Public', 'Long_Public']].notna().all(axis=1).sum()
                     report += f"- **Valid Coordinates**: {valid:,}/{len(df):,} ({valid/len(df)*100:.1f}%)\n"
+                
                 
                 report += "\n## 2. ANALYSIS RESULTS\n"
                 if st.session_state.analysis_results:
